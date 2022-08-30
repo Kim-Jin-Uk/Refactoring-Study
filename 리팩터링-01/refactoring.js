@@ -1,3 +1,36 @@
+class PerformanceCalculator{
+    constructor(performance,play){
+        this.performance = performance
+        this.play = play
+    }
+    get amount(){
+        throw new Error(`서브클래스에서 처리하도록 설계되었습니다`)
+    }
+
+    get volumeCredits(){
+        return Math.max(this.performance.audience - 30,0)
+    }
+}
+
+class TragedyCalculator extends PerformanceCalculator{
+    get amount(){
+        let result = 40000
+        if(this.performance.audience > 30) result += 1000*(this.performance.audience - 30)
+        return result
+    }
+}
+
+class ComedyCalculator extends PerformanceCalculator{
+    get amount(){
+        let result = 30000 + 300*this.performance.audience
+        if(this.performance.audience > 20) result += 10000 + 500*(this.performance.audience - 20)
+        return result
+    }
+    get volumeCredits(){
+        return super.volumeCredits + Math.floor(this.performance.audience / 5)
+    }
+}
+
 const plays = {
     "hamlet":{"name":"Hamlet","type":"tragedy"},
     "as-like":{"name":"As You Like","type":"comedy"},
@@ -26,6 +59,15 @@ for(const invoice of invoices){
 }
 for(const invoice of invoices){
     console.log(htmlStatement(invoice))
+}
+
+function createPerformanceCalculator(performance,play){
+    switch(play.type){
+        case "tragedy": return new TragedyCalculator(performance,play)
+        case "comedy": return new ComedyCalculator(performance,play)
+        default:
+            throw new Error(`알수없는 장르: ${this.play.type}`)
+    }
 }
 
 function statement(invoice){
@@ -73,40 +115,16 @@ function createStatementData(invoice){
     return statementData
     
     function enrichPerformance(performance){
+        const calculator = createPerformanceCalculator(performance,playFor(performance))
         const result = Object.assign({},performance)
-        result.play = playFor(result)
-        result.amount = amountFor(result)
-        result.volumeCredits = volumeCreditsFor(result)
+        result.play = calculator.play
+        result.amount = calculator.amount
+        result.volumeCredits = calculator.volumeCredits
         return result
     }
 
     function playFor(performance){
         return plays[performance.playId]
-    }
-
-    function amountFor(performance){
-        let result = 0
-        switch(performance.play.type){
-            case "tragedy":
-                result = 40000
-                if(performance.audience > 30) result += 1000*(performance.audience - 30)
-                break
-            case "comedy":
-                result = 30000
-                if(performance.audience > 20) result += 10000 + 500*(performance.audience - 20)
-                result += 300*performance.audience
-                break
-            default:
-                throw new Error(`알수없는 장르: ${performance.play.type}`)
-        }
-        return result
-    }
-
-    function volumeCreditsFor(performance){
-        let result = 0
-        result += Math.max(performance.audience - 30,0)
-        if(performance.play.type === "comedy") result += Math.floor(performance.audience / 5)
-        return result
     }
 
     function totalVolumeCredits(data){
